@@ -27,6 +27,7 @@ import (
 	"github.com/spotinst/spotinst-sdk-go/service/ocean/providers/aws"
 	"github.com/spotinst/spotinst-sdk-go/spotinst/client"
 	"github.com/spotinst/spotinst-sdk-go/spotinst/util/stringutil"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog"
 	"k8s.io/kops/pkg/resources/spotinst"
 	"k8s.io/kops/upup/pkg/fi"
@@ -46,8 +47,7 @@ type Ocean struct {
 	SpotPercentage           *float64
 	UtilizeReservedInstances *bool
 	FallbackToOnDemand       *bool
-	InstanceTypesWhitelist   []string
-	InstanceTypesBlacklist   []string
+	InstanceTypes            []string
 	Tags                     map[string]string
 	UserData                 *fi.ResourceHolder
 	ImageID                  *string
@@ -167,14 +167,8 @@ func (o *Ocean) Find(c *fi.Context) (*Ocean, error) {
 		// Instance types.
 		{
 			if itypes := compute.InstanceTypes; itypes != nil {
-				// Whitelist.
-				if len(itypes.Whitelist) > 0 {
-					actual.InstanceTypesWhitelist = itypes.Whitelist
-				}
-
-				// Blacklist.
-				if len(itypes.Blacklist) > 0 {
-					actual.InstanceTypesBlacklist = itypes.Blacklist
+				if itypes.Whitelist != nil && len(itypes.Whitelist) > 0 {
+					actual.InstanceTypes = itypes.Whitelist
 				}
 			}
 		}
@@ -222,18 +216,21 @@ func (o *Ocean) Find(c *fi.Context) (*Ocean, error) {
 
 		// User data.
 		{
+			var userData []byte
+
 			if lc.UserData != nil {
-				userData, err := base64.StdEncoding.DecodeString(fi.StringValue(lc.UserData))
+				userData, err = base64.StdEncoding.DecodeString(fi.StringValue(lc.UserData))
 				if err != nil {
 					return nil, err
 				}
-				actual.UserData = fi.WrapResource(fi.NewStringResource(string(userData)))
 			}
+
+			actual.UserData = fi.WrapResource(fi.NewStringResource(string(userData)))
 		}
 
 		// EBS optimization.
 		{
-			if lc.EBSOptimized != nil {
+			if fi.BoolValue(lc.EBSOptimized) {
 				if actual.RootVolumeOpts == nil {
 					actual.RootVolumeOpts = new(RootVolumeOpts)
 				}
@@ -368,25 +365,6 @@ func (_ *Ocean) create(cloud awsup.AWSCloud, a, e, changes *Ocean) error {
 			}
 		}
 
-		// Instance types.
-		{
-			itypes := new(aws.InstanceTypes)
-
-			// Whitelist.
-			if e.InstanceTypesWhitelist != nil {
-				itypes.SetWhitelist(e.InstanceTypesWhitelist)
-			}
-
-			// Blacklist.
-			if e.InstanceTypesBlacklist != nil {
-				itypes.SetBlacklist(e.InstanceTypesBlacklist)
-			}
-
-			if len(itypes.Whitelist) > 0 || len(itypes.Blacklist) > 0 {
-				ocean.Compute.SetInstanceTypes(itypes)
-			}
-		}
-
 		// Launch specification.
 		{
 			ocean.Compute.LaunchSpecification.SetMonitoring(e.Monitoring)
@@ -410,8 +388,11 @@ func (_ *Ocean) create(cloud awsup.AWSCloud, a, e, changes *Ocean) error {
 					if err != nil {
 						return err
 					}
-					encoded := base64.StdEncoding.EncodeToString([]byte(userData))
-					ocean.Compute.LaunchSpecification.SetUserData(fi.String(encoded))
+
+					if len(userData) > 0 {
+						encoded := base64.StdEncoding.EncodeToString([]byte(userData))
+						ocean.Compute.LaunchSpecification.SetUserData(fi.String(encoded))
+					}
 				}
 			}
 
@@ -609,36 +590,17 @@ func (_ *Ocean) update(cloud awsup.AWSCloud, a, e, changes *Ocean) error {
 
 		// Instance types.
 		{
-			// Whitelist.
-			{
-				if changes.InstanceTypesWhitelist != nil {
-					if ocean.Compute == nil {
-						ocean.Compute = new(aws.Compute)
-					}
-					if ocean.Compute.InstanceTypes == nil {
-						ocean.Compute.InstanceTypes = new(aws.InstanceTypes)
-					}
-
-					ocean.Compute.InstanceTypes.SetWhitelist(e.InstanceTypesWhitelist)
-					changes.InstanceTypesWhitelist = nil
-					changed = true
+			if changes.InstanceTypes != nil {
+				if ocean.Compute == nil {
+					ocean.Compute = new(aws.Compute)
 				}
-			}
-
-			// Blacklist.
-			{
-				if changes.InstanceTypesBlacklist != nil {
-					if ocean.Compute == nil {
-						ocean.Compute = new(aws.Compute)
-					}
-					if ocean.Compute.InstanceTypes == nil {
-						ocean.Compute.InstanceTypes = new(aws.InstanceTypes)
-					}
-
-					ocean.Compute.InstanceTypes.SetBlacklist(e.InstanceTypesBlacklist)
-					changes.InstanceTypesBlacklist = nil
-					changed = true
+				if ocean.Compute.InstanceTypes == nil {
+					ocean.Compute.InstanceTypes = new(aws.InstanceTypes)
 				}
+
+				ocean.Compute.InstanceTypes.SetWhitelist(e.InstanceTypes)
+				changes.InstanceTypes = nil
+				changed = true
 			}
 		}
 
@@ -668,22 +630,25 @@ func (_ *Ocean) update(cloud awsup.AWSCloud, a, e, changes *Ocean) error {
 			// User data.
 			{
 				if changes.UserData != nil {
-					if ocean.Compute == nil {
-						ocean.Compute = new(aws.Compute)
-					}
-					if ocean.Compute.LaunchSpecification == nil {
-						ocean.Compute.LaunchSpecification = new(aws.LaunchSpecification)
-					}
-
 					userData, err := e.UserData.AsString()
 					if err != nil {
 						return err
 					}
-					encoded := base64.StdEncoding.EncodeToString([]byte(userData))
 
-					ocean.Compute.LaunchSpecification.SetUserData(fi.String(encoded))
+					if len(userData) > 0 {
+						if ocean.Compute == nil {
+							ocean.Compute = new(aws.Compute)
+						}
+						if ocean.Compute.LaunchSpecification == nil {
+							ocean.Compute.LaunchSpecification = new(aws.LaunchSpecification)
+						}
+
+						encoded := base64.StdEncoding.EncodeToString([]byte(userData))
+						ocean.Compute.LaunchSpecification.SetUserData(fi.String(encoded))
+						changed = true
+					}
+
 					changes.UserData = nil
-					changed = true
 				}
 			}
 
@@ -873,7 +838,7 @@ func (_ *Ocean) update(cloud awsup.AWSCloud, a, e, changes *Ocean) error {
 						MemoryPerUnit: e.AutoScalerOpts.Headroom.MemPerUnit,
 						NumOfUnits:    e.AutoScalerOpts.Headroom.NumOfUnits,
 					}
-				} else {
+				} else if a.AutoScalerOpts != nil && a.AutoScalerOpts.Headroom != nil {
 					autoScaler.IsAutoConfig = fi.Bool(true)
 					autoScaler.SetHeadroom(nil)
 				}
@@ -913,15 +878,13 @@ func (_ *Ocean) update(cloud awsup.AWSCloud, a, e, changes *Ocean) error {
 }
 
 type terraformOcean struct {
-	Name                   *string              `json:"name,omitempty"`
-	ControllerClusterID    *string              `json:"controller_id,omitempty"`
-	Region                 *string              `json:"region,omitempty"`
-	InstanceTypesWhitelist []string             `json:"whitelist,omitempty"`
-	InstanceTypesBlacklist []string             `json:"blacklist,omitempty"`
-	SubnetIDs              []*terraform.Literal `json:"subnet_ids,omitempty"`
-	AutoScaler             *terraformAutoScaler `json:"autoscaler,omitempty"`
-	Tags                   []*terraformKV       `json:"tags,omitempty"`
-	Lifecycle              *terraformLifecycle  `json:"lifecycle,omitempty"`
+	Name                *string              `json:"name,omitempty"`
+	ControllerClusterID *string              `json:"controller_id,omitempty"`
+	Region              *string              `json:"region,omitempty"`
+	SubnetIDs           []*terraform.Literal `json:"subnet_ids,omitempty"`
+	AutoScaler          *terraformAutoScaler `json:"autoscaler,omitempty"`
+	Tags                []*terraformKV       `json:"tags,omitempty"`
+	Lifecycle           *terraformLifecycle  `json:"lifecycle,omitempty"`
 
 	*terraformOceanCapacity
 	*terraformOceanStrategy
@@ -941,17 +904,20 @@ type terraformOceanStrategy struct {
 }
 
 type terraformOceanLaunchSpec struct {
-	Monitoring               *bool                `json:"monitoring,omitempty"`
-	EBSOptimized             *bool                `json:"ebs_optimized,omitempty"`
-	ImageID                  *string              `json:"image_id,omitempty"`
-	AssociatePublicIPAddress *bool                `json:"associate_public_ip_address,omitempty"`
-	RootVolumeSize           *int32               `json:"root_volume_size,omitempty"`
-	UserData                 *terraform.Literal   `json:"user_data,omitempty"`
-	IAMInstanceProfile       *terraform.Literal   `json:"iam_instance_profile,omitempty"`
-	KeyName                  *terraform.Literal   `json:"key_name,omitempty"`
-	SecurityGroups           []*terraform.Literal `json:"security_groups,omitempty"`
-	Labels                   []*terraformKV       `json:"labels,omitempty"`
-	Tags                     []*terraformKV       `json:"tags,omitempty"`
+	Monitoring               *bool                          `json:"monitoring,omitempty"`
+	EBSOptimized             *bool                          `json:"ebs_optimized,omitempty"`
+	ImageID                  *string                        `json:"image_id,omitempty"`
+	AssociatePublicIPAddress *bool                          `json:"associate_public_ip_address,omitempty"`
+	RootVolumeSize           *int32                         `json:"root_volume_size,omitempty"`
+	UserData                 *terraform.Literal             `json:"user_data,omitempty"`
+	IAMInstanceProfile       *terraform.Literal             `json:"iam_instance_profile,omitempty"`
+	KeyName                  *terraform.Literal             `json:"key_name,omitempty"`
+	SubnetIDs                []*terraform.Literal           `json:"subnet_ids,omitempty"`
+	SecurityGroups           []*terraform.Literal           `json:"security_groups,omitempty"`
+	Taints                   []corev1.Taint                 `json:"taints,omitempty"`
+	Labels                   []*terraformKV                 `json:"labels,omitempty"`
+	Tags                     []*terraformKV                 `json:"tags,omitempty"`
+	Headrooms                []*terraformAutoScalerHeadroom `json:"autoscale_headrooms,omitempty"`
 }
 
 func (_ *Ocean) RenderTerraform(t *terraform.TerraformTarget, a, e, changes *Ocean) error {
@@ -1058,19 +1024,6 @@ func (_ *Ocean) RenderTerraform(t *terraform.TerraformTarget, a, e, changes *Oce
 					return err
 				}
 			}
-		}
-	}
-
-	// Instance types.
-	{
-		// Whitelist.
-		if e.InstanceTypesWhitelist != nil {
-			tf.InstanceTypesWhitelist = e.InstanceTypesWhitelist
-		}
-
-		// Blacklist.
-		if e.InstanceTypesBlacklist != nil {
-			tf.InstanceTypesBlacklist = e.InstanceTypesBlacklist
 		}
 	}
 
