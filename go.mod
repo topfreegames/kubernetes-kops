@@ -140,7 +140,7 @@ require (
 	k8s.io/helm v2.9.0+incompatible
 	k8s.io/klog v1.0.0
 	k8s.io/kubectl v0.0.0
-	k8s.io/kubernetes v1.17.3 // indirect
+	k8s.io/kubernetes v1.17.3
 	k8s.io/legacy-cloud-providers v0.0.0
 	k8s.io/utils v0.0.0-20191114200735-6ca3b61696b6
 	sigs.k8s.io/controller-runtime v0.4.0

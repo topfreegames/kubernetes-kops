@@ -1027,6 +1027,8 @@ gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v2 v2.2.4/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v2 v2.2.7 h1:VUgggvou5XRW9mHwD/yXxIYSMtY0zoKQf/v226p2nyo=
 gopkg.in/yaml.v2 v2.2.7/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
+gopkg.in/yaml.v2 v2.2.8 h1:obN1ZagJSUGI0Ek/LBmuj4SNLPfIny3KsKFopxRdj10=
+gopkg.in/yaml.v2 v2.2.8/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v3 v3.0.0-20190905181640-827449938966 h1:B0J02caTR6tpSJozBJyiAzT6CtBzjclw4pgm9gg8Ys0=
 gopkg.in/yaml.v3 v3.0.0-20190905181640-827449938966/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 gotest.tools v2.1.0+incompatible/go.mod h1:DsYFclhRJ6vuDpmuTbkuFWG+y2sxOXAzmJt81HFBacw=
@@ -1089,6 +1091,8 @@ k8s.io/kubectl v0.0.0-20191114113550-6123e1c827f7 h1:J4a49dHJowmwpCnPsIlbUlh1XE+
 k8s.io/kubectl v0.0.0-20191114113550-6123e1c827f7/go.mod h1:MYrMrU6JgEeGVz2sFggJizAfyoRjwsP4iTQcP8iQS00=
 k8s.io/kubelet v0.0.0-20191114110954-d67a8e7e2200/go.mod h1:BJl+6D6pGeUm+/uJfOWrPouIq05g/TCiKXc/Bxw+ZYw=
 k8s.io/kubernetes v1.17.0/go.mod h1:NbNV+69yL3eKiKDJ+ZEjqOplN3BFXKBeunzkoOy8WLo=
+k8s.io/kubernetes v1.17.3 h1:zWCppkLfHM+hoLqfbsrQ0cJnYw+4vAvedI92oQnjo/Q=
+k8s.io/kubernetes v1.17.3/go.mod h1:gt28rfzaskIzJ8d82TSJmGrJ0XZD0BBy8TcQvTuCI3w=
 k8s.io/legacy-cloud-providers v0.0.0-20191114112655-db9be3e678bb h1:DnFIm5tzVZTCNDzBvj+oHntMHhF7WNZ3AQD30MGX43E=
 k8s.io/legacy-cloud-providers v0.0.0-20191114112655-db9be3e678bb/go.mod h1:LwtW+cUPHdurdbed4pXQiAWcjYg9XkwxPO8NOX0qeQA=
 k8s.io/metrics v0.0.0-20191114105837-a4a2842dc51b/go.mod h1:+OP14I2yuLAiYCsEB4pC2101W6tZ2rC9uSZFvR3DEJg=

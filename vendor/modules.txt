@@ -645,7 +645,7 @@ gopkg.in/gcfg.v1/types
 gopkg.in/inf.v0
 # gopkg.in/warnings.v0 v0.1.2
 gopkg.in/warnings.v0
-# gopkg.in/yaml.v2 v2.2.7
+# gopkg.in/yaml.v2 v2.2.8
 gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.0-20190905181640-827449938966
 gopkg.in/yaml.v3
@@ -1046,6 +1046,10 @@ k8s.io/kubectl/pkg/util/templates
 k8s.io/kubectl/pkg/util/term
 k8s.io/kubectl/pkg/validation
 k8s.io/kubectl/pkg/version
+# k8s.io/kubernetes v1.17.3
+k8s.io/kubernetes/pkg/apis/core
+k8s.io/kubernetes/pkg/apis/core/helper
+k8s.io/kubernetes/pkg/util/taints
 # k8s.io/legacy-cloud-providers v0.0.0 => k8s.io/legacy-cloud-providers v0.0.0-20191114112655-db9be3e678bb
 k8s.io/legacy-cloud-providers/aws
 k8s.io/legacy-cloud-providers/gce
